@@ -54,8 +54,8 @@ This system is built **from scratch in Java**, using:
 | Component | Technology Used |
 |----------|-----------------|
 | Programming Language | Java |
-| Data Structures | Custom Hash Table, LinkedList |
-| Development Environment | IntelliJ / VS Code / NetBeans |
+| Data Structures | Custom Hash Table,Stack, LinkedList |
+| Development Environment | Eclipse |
 | Version Control | Git |
 | GUI | Java Swing / JavaFX |
 | Documentation | Markdown |
