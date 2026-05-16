@@ -1259,16 +1259,40 @@ public class MainApplication extends Application {
     TextField styledField(String prompt) {
         TextField tf = new TextField();
         tf.setPromptText(prompt);
-        tf.setStyle("-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-prompt-text-fill:" + TEXT_SEC
-                  + ";-fx-border-color:" + BORDER + ";-fx-border-radius:6;-fx-background-radius:6;-fx-padding:8;-fx-font-size:13px;");
+        tf.setStyle(
+            "-fx-background-color:#21262d;"
+            + "-fx-control-inner-background:#21262d;"
+            + "-fx-text-fill:" + TEXT_PRI + ";"
+            + "-fx-prompt-text-fill:" + TEXT_SEC + ";"
+            + "-fx-highlight-fill:#388bfd;"
+            + "-fx-highlight-text-fill:#ffffff;"
+            + "-fx-border-color:" + BORDER + ";"
+            + "-fx-border-radius:6;"
+            + "-fx-background-radius:6;"
+            + "-fx-padding:8;"
+            + "-fx-font-size:13px;"
+            + "-fx-font-family:'Consolas';"
+        );
         return tf;
     }
 
     PasswordField styledPass(String prompt) {
         PasswordField pf = new PasswordField();
         pf.setPromptText(prompt);
-        pf.setStyle("-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-prompt-text-fill:" + TEXT_SEC
-                  + ";-fx-border-color:" + BORDER + ";-fx-border-radius:6;-fx-background-radius:6;-fx-padding:8;-fx-font-size:13px;");
+        pf.setStyle(
+            "-fx-background-color:#21262d;"
+            + "-fx-control-inner-background:#21262d;"
+            + "-fx-text-fill:" + TEXT_PRI + ";"
+            + "-fx-prompt-text-fill:" + TEXT_SEC + ";"
+            + "-fx-highlight-fill:#388bfd;"
+            + "-fx-highlight-text-fill:#ffffff;"
+            + "-fx-border-color:" + BORDER + ";"
+            + "-fx-border-radius:6;"
+            + "-fx-background-radius:6;"
+            + "-fx-padding:8;"
+            + "-fx-font-size:13px;"
+            + "-fx-font-family:'Consolas';"
+        );
         return pf;
     }
 
@@ -1660,7 +1684,18 @@ public class MainApplication extends Application {
         TextArea contentArea2 = new TextArea();
         contentArea2.setPromptText("File content...");
         contentArea2.setPrefRowCount(5);
-        contentArea2.setStyle("-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';-fx-font-size:13px;-fx-border-color:" + BORDER + ";-fx-border-radius:6;-fx-background-radius:6;");
+        contentArea2.setStyle(
+            "-fx-background-color:#21262d;"
+            + "-fx-control-inner-background:#21262d;"
+            + "-fx-text-fill:" + TEXT_PRI + ";"
+            + "-fx-highlight-fill:#388bfd;"
+            + "-fx-highlight-text-fill:#ffffff;"
+            + "-fx-font-family:'Consolas';"
+            + "-fx-font-size:13px;"
+            + "-fx-border-color:" + BORDER + ";"
+            + "-fx-border-radius:6;"
+            + "-fx-background-radius:6;"
+        );
 
         // CHANGE 2 — Mode selection: Overwrite vs Append
         Label modeLabel = new Label("Edit Mode:");
@@ -2101,30 +2136,43 @@ public class MainApplication extends Application {
         }
         panel.getChildren().add(sharedList);
 
-        // Local contributors (this user's local repo)
+        // Local contributors — scanned directly from commit history (no double counting)
         Label localTitle = new Label("Local Contributors (This Session)");
         localTitle.setStyle("-fx-text-fill:" + ORANGE + ";-fx-font-size:15px;-fx-font-weight:bold;-fx-font-family:'Consolas';");
         panel.getChildren().addAll(new Label(""), localTitle);
-        panel.getChildren().add(hintLabel("Commits made locally (including pulled commits)"));
+        panel.getChildren().add(hintLabel("All unique authors found in local commit history"));
 
         VBox localList = new VBox(8);
-        java.util.List<String[]> lb = currentRepo.contributors.getLeaderboard();
-        if (lb.isEmpty()) {
-            localList.getChildren().add(subLabel("No local contributors yet. Make some commits first."));
+
+        // Scan local history directly — avoids double counting from contributors.record()
+        java.util.LinkedHashMap<String, Integer> localCounts = new java.util.LinkedHashMap<>();
+        Commit localCurr = currentRepo.history.head;
+        while (localCurr != null) {
+            String author = localCurr.getAuthor();
+            if (author != null) localCounts.merge(author, 1, Integer::sum);
+            localCurr = localCurr.parent;
+        }
+
+        if (localCounts.isEmpty()) {
+            localList.getChildren().add(subLabel("No local commits yet. Make some commits first."));
         } else {
-            for (int i = 0; i < lb.size(); i++) {
-                String[] entry = lb.get(i);
-                int myCount = Integer.parseInt(entry[1]);
-                // count how many have strictly more — that is my rank
+            java.util.List<java.util.Map.Entry<String, Integer>> localEntries =
+                new java.util.ArrayList<>(localCounts.entrySet());
+            localEntries.sort((a, b) -> b.getValue() - a.getValue());
+
+            for (int i = 0; i < localEntries.size(); i++) {
+                java.util.Map.Entry<String, Integer> entry = localEntries.get(i);
+                int myCount = entry.getValue();
                 int rank = 1;
-                for (String[] other : lb)
-                    if (Integer.parseInt(other[1]) > myCount) rank++;
-                long sameRankCount = lb.stream().filter(x -> Integer.parseInt(x[1]) == myCount).count();
-                String rankStr = (sameRankCount > 1 ? "Tied-" : "") + rank + (rank == 1 ? "st" : rank == 2 ? "nd" : rank == 3 ? "rd" : "th");
+                for (java.util.Map.Entry<String, Integer> other : localEntries)
+                    if (other.getValue() > myCount) rank++;
+                long sameRankCount = localEntries.stream().filter(x -> x.getValue() == myCount).count();
+                String rankStr = (sameRankCount > 1 ? "Tied-" : "") + rank
+                    + (rank == 1 ? "st" : rank == 2 ? "nd" : rank == 3 ? "rd" : "th");
                 HBox row = new HBox(16); row.setAlignment(Pos.CENTER_LEFT); row.setPadding(new Insets(14, 20, 14, 20));
                 row.setStyle("-fx-background-color:" + BG_CARD + ";-fx-border-color:" + BORDER + ";-fx-border-radius:10;-fx-background-radius:10;");
                 Label rankLbl = new Label(rankStr); rankLbl.setStyle("-fx-text-fill:" + ORANGE + ";-fx-font-size:14px;-fx-font-weight:bold;-fx-font-family:'Consolas';");
-                Label name    = new Label(entry[0]); name.setStyle("-fx-text-fill:" + TEXT_PRI + ";-fx-font-size:16px;-fx-font-weight:bold;-fx-font-family:'Consolas';");
+                Label name    = new Label(entry.getKey()); name.setStyle("-fx-text-fill:" + TEXT_PRI + ";-fx-font-size:16px;-fx-font-weight:bold;-fx-font-family:'Consolas';");
                 Region sp     = new Region(); HBox.setHgrow(sp, Priority.ALWAYS);
                 Label count   = new Label(myCount + " commits"); count.setStyle("-fx-text-fill:" + ACCENT + ";-fx-font-size:15px;-fx-font-weight:bold;-fx-font-family:'Consolas';");
                 row.getChildren().addAll(rankLbl, name, sp, count);
