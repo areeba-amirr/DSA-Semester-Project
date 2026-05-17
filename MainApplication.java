@@ -1435,7 +1435,9 @@ public class MainApplication extends Application {
         registerBtn.setOnAction(e -> showRegisterScreen());
         card.getChildren().addAll(loginTitle, fieldLabel("Username"), userField, fieldLabel("Password"), passField, loginBtn, orLabel, registerBtn, errLabel);
         box.getChildren().addAll(logo, card);
-        primaryStage.setScene(new Scene(box, 1100, 700));
+        Scene loginScene = new Scene(box, 1100, 700);
+        applyDarkTheme(loginScene);
+        primaryStage.setScene(loginScene);
         primaryStage.show();
     }
 
@@ -1504,7 +1506,9 @@ public class MainApplication extends Application {
             fieldLabel("Confirm Password"), pw2Field, pw2Err, fieldLabel("Email"), emField,
             hintLabel("Must contain @ and a valid domain e.g. gmail.com"), emErr, regBtn, backBtn, genMsg);
         box.getChildren().add(card);
-        primaryStage.setScene(new Scene(box, 1100, 700));
+        Scene regScene = new Scene(box, 1100, 700);
+        applyDarkTheme(regScene);
+        primaryStage.setScene(regScene);
     }
 
     // ── Main Dashboard (unchanged) ───────────────────────────────
@@ -1573,33 +1577,242 @@ public class MainApplication extends Application {
 
         showRepoPanel();
         Scene mainScene = new Scene(root, 1100, 700);
-        // Global CSS to fix ComboBox dropdown dark theme
-        mainScene.getStylesheets().add("data:text/css," +
-            ".combo-box-popup .list-view {" +
-            "  -fx-background-color: #21262d;" +
-            "  -fx-border-color: #30363d;" +
-            "}" +
-            ".combo-box-popup .list-cell {" +
-            "  -fx-background-color: #21262d;" +
-            "  -fx-text-fill: #e6edf3;" +
-            "  -fx-font-family: Consolas;" +
-            "  -fx-font-size: 13px;" +
-            "  -fx-padding: 6 12;" +
-            "}" +
-            ".combo-box-popup .list-cell:hover {" +
-            "  -fx-background-color: #30363d;" +
-            "}" +
-            ".combo-box-popup .list-cell:selected {" +
-            "  -fx-background-color: #238636;" +
-            "}" +
-            ".scroll-bar {-fx-background-color:#21262d;}" +
-            ".scroll-bar .thumb {-fx-background-color:#30363d;}" +
-            ".radio-button .radio {-fx-border-color:#30363d;-fx-background-color:#21262d;}" +
-            ".radio-button:selected .radio {-fx-background-color:#238636;}" +
-            ".check-box .box {-fx-border-color:#30363d;-fx-background-color:#21262d;}" +
-            ".check-box:selected .box {-fx-background-color:#238636;}"
-        );
+        // Write dark theme CSS file and apply it
+        applyDarkTheme(mainScene);
         primaryStage.setScene(mainScene);
+    }
+
+    static void applyDarkTheme(Scene scene) {
+        try {
+            String css =
+                // ── ComboBox button area ──────────────────────────────────
+                ".combo-box { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-radius: 6; " +
+                "  -fx-background-radius: 6; " +
+                "} " +
+                ".combo-box .list-cell { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 13px; " +
+                "  -fx-padding: 6 12; " +
+                "} " +
+                ".combo-box:hover { " +
+                "  -fx-background-color: #30363d; " +
+                "} " +
+                ".combo-box .arrow-button { " +
+                "  -fx-background-color: #21262d; " +
+                "} " +
+                ".combo-box .arrow-button .arrow { " +
+                "  -fx-background-color: #e6edf3; " +
+                "} " +
+                // ── ComboBox dropdown popup ───────────────────────────────
+                ".combo-box-popup .list-view { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-width: 1; " +
+                "  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 12, 0, 0, 4); " +
+                "} " +
+                ".combo-box-popup .list-cell { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 13px; " +
+                "  -fx-padding: 8 14; " +
+                "} " +
+                ".combo-box-popup .list-cell:odd { " +
+                "  -fx-background-color: #1c2128; " +
+                "} " +
+                ".combo-box-popup .list-cell:hover { " +
+                "  -fx-background-color: #30363d; " +
+                "  -fx-text-fill: #ffffff; " +
+                "} " +
+                ".combo-box-popup .list-cell:selected, " +
+                ".combo-box-popup .list-cell:selected:hover { " +
+                "  -fx-background-color: #238636; " +
+                "  -fx-text-fill: #ffffff; " +
+                "} " +
+                // ── ScrollBar ─────────────────────────────────────────────
+                ".scroll-bar { " +
+                "  -fx-background-color: #161b22; " +
+                "} " +
+                ".scroll-bar .thumb { " +
+                "  -fx-background-color: #30363d; " +
+                "  -fx-background-radius: 4; " +
+                "} " +
+                ".scroll-bar .thumb:hover { " +
+                "  -fx-background-color: #484f58; " +
+                "} " +
+                ".scroll-bar .track { " +
+                "  -fx-background-color: #161b22; " +
+                "} " +
+                ".scroll-bar .increment-button, " +
+                ".scroll-bar .decrement-button { " +
+                "  -fx-background-color: #161b22; " +
+                "} " +
+                ".scroll-bar .increment-arrow, " +
+                ".scroll-bar .decrement-arrow { " +
+                "  -fx-background-color: #484f58; " +
+                "} " +
+                ".scroll-pane { " +
+                "  -fx-background-color: #0d1117; " +
+                "  -fx-border-color: transparent; " +
+                "} " +
+                ".scroll-pane .viewport { " +
+                "  -fx-background-color: #0d1117; " +
+                "} " +
+                ".scroll-pane > .scroll-bar:horizontal, " +
+                ".scroll-pane > .scroll-bar:vertical { " +
+                "  -fx-background-color: #161b22; " +
+                "} " +
+                // ── RadioButton ───────────────────────────────────────────
+                ".radio-button { " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 13px; " +
+                "} " +
+                ".radio-button .radio { " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-radius: 10; " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-background-radius: 10; " +
+                "} " +
+                ".radio-button:hover .radio { " +
+                "  -fx-border-color: #58a6ff; " +
+                "} " +
+                ".radio-button:selected .radio { " +
+                "  -fx-background-color: #238636; " +
+                "  -fx-border-color: #238636; " +
+                "} " +
+                ".radio-button:selected .dot { " +
+                "  -fx-background-color: #ffffff; " +
+                "} " +
+                // ── CheckBox ──────────────────────────────────────────────
+                ".check-box { " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-font-family: Consolas; " +
+                "} " +
+                ".check-box .box { " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-radius: 4; " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-background-radius: 4; " +
+                "} " +
+                ".check-box:selected .box { " +
+                "  -fx-background-color: #238636; " +
+                "  -fx-border-color: #238636; " +
+                "} " +
+                ".check-box:selected .mark { " +
+                "  -fx-background-color: #ffffff; " +
+                "} " +
+                // ── Alert / Dialog ────────────────────────────────────────
+                ".dialog-pane { " +
+                "  -fx-background-color: #161b22; " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-width: 1; " +
+                "} " +
+                ".dialog-pane .header-panel { " +
+                "  -fx-background-color: #0d1117; " +
+                "} " +
+                ".dialog-pane .header-panel .label { " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 14px; " +
+                "} " +
+                ".dialog-pane .content.label { " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 13px; " +
+                "} " +
+                ".dialog-pane:header .graphic-container { " +
+                "  -fx-background-color: #0d1117; " +
+                "} " +
+                ".dialog-pane .button-bar .button { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-radius: 6; " +
+                "  -fx-background-radius: 6; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 13px; " +
+                "  -fx-cursor: hand; " +
+                "} " +
+                ".dialog-pane .button-bar .button:hover { " +
+                "  -fx-background-color: #30363d; " +
+                "  -fx-text-fill: #ffffff; " +
+                "} " +
+                ".dialog-pane .button-bar .button:default { " +
+                "  -fx-background-color: #238636; " +
+                "  -fx-text-fill: #ffffff; " +
+                "  -fx-border-color: #238636; " +
+                "} " +
+                ".dialog-pane .button-bar .button:default:hover { " +
+                "  -fx-background-color: #2ea043; " +
+                "} " +
+                // ── TextArea inside dialogs ───────────────────────────────
+                ".text-area { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-control-inner-background: #21262d; " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 13px; " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-radius: 6; " +
+                "  -fx-background-radius: 6; " +
+                "} " +
+                ".text-area .content { " +
+                "  -fx-background-color: #21262d; " +
+                "} " +
+                // ── TextField global fallback ─────────────────────────────
+                ".text-field { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-control-inner-background: #21262d; " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-prompt-text-fill: #8b949e; " +
+                "  -fx-highlight-fill: #388bfd; " +
+                "  -fx-highlight-text-fill: #ffffff; " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-radius: 6; " +
+                "  -fx-background-radius: 6; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 13px; " +
+                "} " +
+                // ── PasswordField ─────────────────────────────────────────
+                ".password-field { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-control-inner-background: #21262d; " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-prompt-text-fill: #8b949e; " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-border-radius: 6; " +
+                "  -fx-background-radius: 6; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 13px; " +
+                "} " +
+                // ── Tooltip ───────────────────────────────────────────────
+                ".tooltip { " +
+                "  -fx-background-color: #21262d; " +
+                "  -fx-text-fill: #e6edf3; " +
+                "  -fx-border-color: #30363d; " +
+                "  -fx-font-family: Consolas; " +
+                "  -fx-font-size: 12px; " +
+                "} " +
+                // ── Label default ─────────────────────────────────────────
+                ".label { " +
+                "  -fx-text-fill: #e6edf3; " +
+                "} ";
+
+            // Write to temp file and load
+            java.io.File cssFile = new java.io.File("gitlite_dark.css");
+            try (java.io.FileWriter fw = new java.io.FileWriter(cssFile)) {
+                fw.write(css);
+            }
+            scene.getStylesheets().add(cssFile.toURI().toString());
+        } catch (Exception e) {
+            System.out.println("CSS load failed: " + e.getMessage());
+        }
     }
 
     HBox buildTopBar() {
