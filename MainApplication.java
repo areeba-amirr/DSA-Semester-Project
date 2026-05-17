@@ -1082,8 +1082,27 @@ class Repository implements Serializable {
 
     java.util.List<String[]> getPushStatus(RemoteStore rs) {
         java.util.List<String[]> list = new java.util.ArrayList<>();
+        // Build a set of all commit IDs that exist on the remote
+        // This is the source of truth — not the local pushedIds array
+        // because another user may have pushed these commits from a different account
+        java.util.HashSet<String> remoteIds = new java.util.HashSet<>();
+        if (rs != null) {
+            RemoteRepo remote = rs.getOrCreate(name);
+            if (remote != null && remote.commits != null) {
+                Commit curr = remote.commits.head;
+                while (curr != null) {
+                    remoteIds.add(curr.getId());
+                    curr = curr.parent;
+                }
+            }
+        }
         for (Commit c : collectOldestFirst()) {
-            String status = isPushed(c.getId()) ? "PUSHED" : "LOCAL";
+            if (c == null) continue;
+            // A commit is PUSHED if it exists on remote OR was locally marked pushed
+            boolean pushed = remoteIds.contains(c.getId()) || isPushed(c.getId());
+            // also sync local pushedIds so future checks are consistent
+            if (pushed) markPushed(c.getId());
+            String status = pushed ? "PUSHED" : "LOCAL";
             list.add(new String[]{status, c.getId(), c.getMessage(), c.getAuthor()});
         }
         return list;
@@ -1343,7 +1362,16 @@ public class MainApplication extends Application {
         a.setTitle(title);
         a.setHeaderText(null);
         a.setContentText(msg);
-        a.getDialogPane().setStyle("-fx-background-color:" + BG_CARD + ";");
+        a.getDialogPane().setStyle(
+            "-fx-background-color:" + BG_CARD + ";"
+            + "-fx-text-fill:" + TEXT_PRI + ";"
+            + "-fx-font-family:'Consolas';"
+        );
+        // style the content text label
+        Label content = new Label(msg);
+        content.setStyle("-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';-fx-font-size:13px;-fx-wrap-text:true;");
+        content.setWrapText(true);
+        a.getDialogPane().setContent(content);
         a.showAndWait();
     }
 
@@ -1385,8 +1413,8 @@ public class MainApplication extends Application {
         PasswordField passField = styledPass("Password");  passField.setPrefWidth(340);
         Label errLabel  = errorLabel();
         Button loginBtn = styledBtn("Sign in", ACCENT);    loginBtn.setPrefWidth(340);
-        Label orLabel   = new Label("or");
-        orLabel.setStyle("-fx-text-fill:" + TEXT_SEC + ";-fx-font-family:'Consolas';");
+        Label orLabel   = new Label("─────  or  ─────");
+        orLabel.setStyle("-fx-text-fill:" + TEXT_SEC + ";-fx-font-family:'Consolas';-fx-font-size:12px;");
         orLabel.setMaxWidth(340); orLabel.setAlignment(Pos.CENTER);
         Button registerBtn = styledBtn("Create new account", "#21262d"); registerBtn.setPrefWidth(340);
 
@@ -1544,7 +1572,34 @@ public class MainApplication extends Application {
         root.setBottom(statusBar);
 
         showRepoPanel();
-        primaryStage.setScene(new Scene(root, 1100, 700));
+        Scene mainScene = new Scene(root, 1100, 700);
+        // Global CSS to fix ComboBox dropdown dark theme
+        mainScene.getStylesheets().add("data:text/css," +
+            ".combo-box-popup .list-view {" +
+            "  -fx-background-color: #21262d;" +
+            "  -fx-border-color: #30363d;" +
+            "}" +
+            ".combo-box-popup .list-cell {" +
+            "  -fx-background-color: #21262d;" +
+            "  -fx-text-fill: #e6edf3;" +
+            "  -fx-font-family: Consolas;" +
+            "  -fx-font-size: 13px;" +
+            "  -fx-padding: 6 12;" +
+            "}" +
+            ".combo-box-popup .list-cell:hover {" +
+            "  -fx-background-color: #30363d;" +
+            "}" +
+            ".combo-box-popup .list-cell:selected {" +
+            "  -fx-background-color: #238636;" +
+            "}" +
+            ".scroll-bar {-fx-background-color:#21262d;}" +
+            ".scroll-bar .thumb {-fx-background-color:#30363d;}" +
+            ".radio-button .radio {-fx-border-color:#30363d;-fx-background-color:#21262d;}" +
+            ".radio-button:selected .radio {-fx-background-color:#238636;}" +
+            ".check-box .box {-fx-border-color:#30363d;-fx-background-color:#21262d;}" +
+            ".check-box:selected .box {-fx-background-color:#238636;}"
+        );
+        primaryStage.setScene(mainScene);
     }
 
     HBox buildTopBar() {
@@ -1707,8 +1762,10 @@ public class MainApplication extends Application {
         overwriteRb.setToggleGroup(modeGroup);
         appendRb.setToggleGroup(modeGroup);
         overwriteRb.setSelected(true);
-        overwriteRb.setStyle("-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';");
-        appendRb.setStyle("-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';");
+        String rbStyle = "-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';-fx-font-size:13px;"
+            + "-fx-background-color:transparent;";
+        overwriteRb.setStyle(rbStyle);
+        appendRb.setStyle(rbStyle);
 
         HBox modeRow = new HBox(16, modeLabel, overwriteRb, appendRb);
         modeRow.setAlignment(Pos.CENTER_LEFT);
@@ -1807,7 +1864,9 @@ public class MainApplication extends Application {
                 viewBtn.setOnAction(ev -> {
                     Alert a = new Alert(Alert.AlertType.INFORMATION);
                     a.setTitle(key); a.setHeaderText(null);
-                    TextArea ta = new TextArea(fe.getContent()); ta.setEditable(false); ta.setStyle("-fx-font-family:'Consolas';");
+                    a.getDialogPane().setStyle("-fx-background-color:" + BG_CARD + ";-fx-text-fill:" + TEXT_PRI + ";");
+                    TextArea ta = new TextArea(fe.getContent()); ta.setEditable(false);
+                    ta.setStyle("-fx-control-inner-background:#21262d;-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';-fx-font-size:13px;");
                     a.getDialogPane().setContent(ta); a.getDialogPane().setPrefSize(500, 300); a.showAndWait();
                 });
                 row.getChildren().addAll(fname, spr, fsize, viewBtn);
@@ -1833,7 +1892,16 @@ public class MainApplication extends Application {
 
         HBox controls = new HBox(10); controls.setAlignment(Pos.CENTER_LEFT);
         ComboBox<String> fileCombo = new ComboBox<>();
-        fileCombo.setStyle("-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';");
+        fileCombo.setStyle(
+            "-fx-background-color:#21262d;"
+            + "-fx-text-fill:" + TEXT_PRI + ";"
+            + "-fx-prompt-text-fill:" + TEXT_SEC + ";"
+            + "-fx-border-color:" + BORDER + ";"
+            + "-fx-border-radius:6;"
+            + "-fx-background-radius:6;"
+            + "-fx-font-family:'Consolas';"
+            + "-fx-font-size:13px;"
+        );
         fileCombo.setPromptText("Select file...");
         String[] keys = currentRepo.workingFiles.keys();
         if (keys != null) for (String k : keys) if (k != null) fileCombo.getItems().add(k);
@@ -1912,7 +1980,16 @@ public class MainApplication extends Application {
 
         HBox actionRow = new HBox(10); actionRow.setAlignment(Pos.CENTER_LEFT);
         ComboBox<String> branchCombo = new ComboBox<>();
-        branchCombo.setStyle("-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';");
+        branchCombo.setStyle(
+            "-fx-background-color:#21262d;"
+            + "-fx-text-fill:" + TEXT_PRI + ";"
+            + "-fx-prompt-text-fill:" + TEXT_SEC + ";"
+            + "-fx-border-color:" + BORDER + ";"
+            + "-fx-border-radius:6;"
+            + "-fx-background-radius:6;"
+            + "-fx-font-family:'Consolas';"
+            + "-fx-font-size:13px;"
+        );
         branchCombo.setPromptText("Select branch...");
         for (String bn : currentRepo.branches.getNames()) branchCombo.getItems().add(bn);
 
@@ -2023,8 +2100,11 @@ public class MainApplication extends Application {
                 if (diffFn.getText().trim().isEmpty()) throw new FileNotFoundException2("Filename required.");
                 String result = currentRepo.diff(diffId1.getText().trim(), diffId2.getText().trim(), diffFn.getText().trim());
                 Alert a = new Alert(Alert.AlertType.INFORMATION);
-                TextArea ta = new TextArea(result); ta.setEditable(false); ta.setStyle("-fx-font-family:'Consolas';");
-                a.setTitle("Diff Result"); a.setHeaderText(null); a.getDialogPane().setContent(ta); a.getDialogPane().setPrefSize(560, 360); a.showAndWait();
+                TextArea ta = new TextArea(result); ta.setEditable(false);
+                ta.setStyle("-fx-control-inner-background:#21262d;-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';-fx-font-size:13px;");
+                a.setTitle("Diff Result"); a.setHeaderText(null);
+                a.getDialogPane().setStyle("-fx-background-color:" + BG_CARD + ";-fx-text-fill:" + TEXT_PRI + ";");
+                a.getDialogPane().setContent(ta); a.getDialogPane().setPrefSize(560, 360); a.showAndWait();
             } catch (CommitNotFoundException ex)  { showError(toolsErr, ex.getMessage()); }
               catch (FileNotFoundException2 ex)   { showError(toolsErr, ex.getMessage()); }
         });
@@ -2076,7 +2156,9 @@ public class MainApplication extends Application {
         a.setTitle("Commit: " + c.getId()); a.setHeaderText(c.toString());
         StringBuilder sb = new StringBuilder("Files in this commit:\n");
         for (int i = 0; i < c.getFileCount(); i++) sb.append("  - ").append(c.getFile(i).getFilename()).append("\n");
-        TextArea ta = new TextArea(sb.toString()); ta.setEditable(false); ta.setStyle("-fx-font-family:'Consolas';");
+        TextArea ta = new TextArea(sb.toString()); ta.setEditable(false);
+        ta.setStyle("-fx-control-inner-background:#21262d;-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';-fx-font-size:13px;");
+        a.getDialogPane().setStyle("-fx-background-color:" + BG_CARD + ";-fx-text-fill:" + TEXT_PRI + ";");
         a.getDialogPane().setContent(ta); a.getDialogPane().setPrefSize(500, 260); a.showAndWait();
     }
 
@@ -2139,7 +2221,9 @@ public class MainApplication extends Application {
         // Local contributors — scanned directly from commit history (no double counting)
         Label localTitle = new Label("Local Contributors (This Session)");
         localTitle.setStyle("-fx-text-fill:" + ORANGE + ";-fx-font-size:15px;-fx-font-weight:bold;-fx-font-family:'Consolas';");
-        panel.getChildren().addAll(new Label(""), localTitle);
+        Label spacerLbl = new Label("");
+        spacerLbl.setStyle("-fx-background-color:transparent;");
+        panel.getChildren().addAll(spacerLbl, localTitle);
         panel.getChildren().add(hintLabel("All unique authors found in local commit history"));
 
         VBox localList = new VBox(8);
@@ -2350,13 +2434,13 @@ public class MainApplication extends Application {
         TextArea ta = new TextArea(conflictInfo);
         ta.setEditable(false);
         ta.setPrefRowCount(10);
-        ta.setStyle("-fx-font-family:'Consolas';-fx-font-size:12px;");
+        ta.setStyle("-fx-control-inner-background:#21262d;-fx-background-color:#21262d;-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';-fx-font-size:12px;");
 
         VBox content = new VBox(10);
         content.getChildren().add(ta);
 
         Label chooseLabel = new Label("Choose resolution:");
-        chooseLabel.setStyle("-fx-font-family:'Consolas';-fx-font-weight:bold;");
+        chooseLabel.setStyle("-fx-text-fill:" + TEXT_PRI + ";-fx-font-family:'Consolas';-fx-font-weight:bold;-fx-font-size:13px;");
 
         ButtonType keepLocal  = new ButtonType("Keep Local Version");
         ButtonType keepRemote = new ButtonType("Keep Remote Version");
@@ -2365,7 +2449,7 @@ public class MainApplication extends Application {
         a.getButtonTypes().setAll(keepLocal, keepRemote, manual);
         a.getDialogPane().setContent(content);
         a.getDialogPane().setPrefSize(580, 420);
-        a.getDialogPane().setStyle("-fx-background-color:" + BG_CARD + ";");
+        a.getDialogPane().setStyle("-fx-background-color:" + BG_CARD + ";-fx-text-fill:" + TEXT_PRI + ";");
 
         java.util.Optional<ButtonType> result = a.showAndWait();
         if (result.isPresent()) {
