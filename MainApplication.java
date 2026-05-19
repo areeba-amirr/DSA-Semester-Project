@@ -160,8 +160,9 @@ class Validator {
     static void validateCommitId(String id) throws CommitNotFoundException {
         if (id == null || id.trim().isEmpty())
             throw new CommitNotFoundException("Commit ID cannot be empty.");
-        if (!id.matches("c\\d{3,}"))
-            throw new CommitNotFoundException("Invalid commit ID. Must be like c001, c002 etc.");
+        // accepts both old format c001 and new format username_c001
+        if (!id.matches("c\\d{3,}") && !id.matches("[a-zA-Z0-9_]+_c\\d{3,}"))
+            throw new CommitNotFoundException("Invalid commit ID. Must be like c001 or username_c001.");
     }
 }
 
@@ -685,7 +686,9 @@ class Repository implements Serializable {
 
     private String nextCommitId() {
         commitCounter++;
-        return String.format("c%03d", commitCounter);
+        // include ownerUsername to avoid ID collision across users
+        // e.g. Ali_c001, Mouiz_c001 are different
+        return ownerUsername + "_c" + String.format("%03d", commitCounter);
     }
 
     void writeFile(String filename, String content) {
@@ -968,11 +971,12 @@ class Repository implements Serializable {
         RemoteRepo remote = rs.getOrCreate(name);
         int count = 0;
         for (Commit c : collectOldestFirst()) {
+            // CHANGE 1 — always add author to shared contributors
+            // regardless of pushed status — ensures no author is missed
+            if (c.getAuthor() != null) remote.sharedContributors.add(c.getAuthor());
             if (!isPushed(c.getId())) {
                 remote.commits.add(c);
                 markPushed(c.getId());
-                // CHANGE 1 — add every unique author to shared contributor set
-                remote.sharedContributors.add(c.getAuthor());
                 count++;
             }
         }
@@ -1005,11 +1009,12 @@ class Repository implements Serializable {
 
         int count = 0;
         for (Commit rc : remoteCm) {
+            // always record author in shared contributors on pull too
+            if (rc.getAuthor() != null) remote.sharedContributors.add(rc.getAuthor());
             if (history.findById(rc.getId()) == null) {
                 history.add(rc);
                 commitIndex.insert(rc);
                 markPushed(rc.getId());
-                // CHANGE 1 — record pulled commit authors locally too
                 contributors.record(rc.getAuthor());
                 count++;
             }
@@ -2398,13 +2403,23 @@ public class MainApplication extends Application {
         if (!hasRemoteContributors) {
             sharedList.getChildren().add(subLabel("No shared contributors yet. Push commits to see contributors here."));
         } else {
-            // Build count map from remote commit history
+            // Build count map from sharedContributors Set + remote commits chain
+            // sharedContributors has ALL unique authors who ever pushed
+            // remote.commits chain gives us per-author commit counts
             java.util.LinkedHashMap<String, Integer> countMap = new java.util.LinkedHashMap<>();
+            // First initialize all known contributors with 0
+            for (String author : remote.sharedContributors) {
+                countMap.put(author, 0);
+            }
+            // Then count commits from full remote chain
             Commit curr = remote.commits.head;
             while (curr != null) {
-                countMap.merge(curr.getAuthor(), 1, Integer::sum);
+                String author = curr.getAuthor();
+                if (author != null) countMap.merge(author, 1, Integer::sum);
                 curr = curr.parent;
             }
+            // Remove any with 0 count — edge case safety
+            countMap.entrySet().removeIf(e -> e.getValue() == 0);
             // Sort by count descending
             java.util.List<java.util.Map.Entry<String, Integer>> entries = new java.util.ArrayList<>(countMap.entrySet());
             entries.sort((a, b) -> b.getValue() - a.getValue());
